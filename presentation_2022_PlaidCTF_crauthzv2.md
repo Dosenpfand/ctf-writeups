@@ -33,7 +33,7 @@ footer: 'Dosenpfand'
     ```
 - Constantly changing
 - Format: `url_encode("crid:" + base64_encode(data))`
-- `data` always start `5` or `7`
+- `data` always starts with `5` or `7`
 
 ---
 
@@ -92,3 +92,51 @@ footer: 'Dosenpfand'
 - Writeup: https://github.com/Dosenpfand/ctf-writeups/blob/master/writeup_2022_PlaidCTF_crauthzv2.md
 
 ---
+
+### Implementation
+
+---
+
+#### CRID
+
+```
++--------------+
+| "crid:"      |
++--------------+---\
+| context_mask |   |
++--------------+   |
+| nonce        |   |
++--------------+   + base64 encoded
+| encrypt(id)  |   |
++--------------+   |
+| tag          |   |
++--------------+---/
+```
+
+---
+
+#### Mask
+
+```
++---------+---------+------+---------+
+| 7 ... 3 | 2       | 1    | 0       |
++---------+---------+------+---------+
+| X       | PURPOSE | CSRF | USER_ID |
++---------+---------+------+---------+
+```
+
+---
+
+#### Associated Data
+
+```
++---------+
+| "id"    |
++---------+---\
+| user_id |   |
++---------+   |
+| csrf    |   + depending on context mask
++---------+   |
+| route   |   |
++---------+---/
+```
