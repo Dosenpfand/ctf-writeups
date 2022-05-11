@@ -88,5 +88,7 @@ footer: 'Dosenpfand'
 ---
 
 ### References
-- Writeup: TODO
 - Intended solution: https://gist.github.com/mserrano/44031a01afb53f98536af17f6ba9eedd
+- Writeup: https://github.com/Dosenpfand/ctf-writeups/blob/master/writeup_2022_PlaidCTF_crauthzv2.md
+
+---
