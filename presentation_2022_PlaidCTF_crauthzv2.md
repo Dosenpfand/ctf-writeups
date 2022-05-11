@@ -50,7 +50,7 @@ footer: 'Dosenpfand'
 
 ### Analysis - CRID III
 - 1st byte of `crid` is `mask`
-- Changing the mask and adapting the `csrf` cookie accordringly validates
+- Changing the mask and adapting the `csrf` cookie accordingly validates
 - E.g. Change from `5` to `3` and set `csrf` cookie to user id.
 
 ---
