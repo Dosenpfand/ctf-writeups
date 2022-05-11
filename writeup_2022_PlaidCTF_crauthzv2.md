@@ -31,7 +31,7 @@ We see that the job posting mentioned in [Task Description](#task-description) w
 
 By looking around the site, we notice that all URLs contain parameters starting with `crid:`, e.g. `http://crauthz.chal.pwni.ng/view?id=crid%3ABZLBNnxQ92%2BcAS1SHrCQ5a86EJTMHkTRUIroXYWk080r`.
 
-These IDs change on every refresh of the page, even for the same resource. We recognize the following pattern across all IDs: `"url_encode(crid:" + base64_encode(data))` with the first byte of `data` always being either `5` or `7`.
+These IDs change on every refresh of the page, even for the same resource. We recognize the following pattern across all IDs: `url_encode("crid:" + base64_encode(data))` with the first byte of `data` always being either `5`, `6` or `7`.
 
 When we modify a URL with a `crid` starting with `5` we get an error message similar to:
 
@@ -118,7 +118,7 @@ Multiple vulnerabilities can be chained to exploit the web application:
 
 ## Solution
 
-We share a resume with a unclosed `img` tag with the `jobs` user. From the requested URL we then `unpin` URL of the internal job listing:
+We share a resume with a unclosed `img` tag with the `jobs` user. From the requested URL we then get an `unpin` URL of the internal job listing:
 
 ```
 /p/unpin_listing?listing_id=crid:Bc6Rl57Y3nU9CbKqnfoCruNP074GbEkkb0RapF1tmQ==&ret=crid:BwK08K/aJC4FC+b5LbL9eAi/47baWgNCkVU7uijNPSj0
