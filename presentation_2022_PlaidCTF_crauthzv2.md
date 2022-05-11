@@ -81,7 +81,7 @@ footer: 'Dosenpfand'
 
 ### Solution II
 5. Pinned listing not viewable due to permission checks, but we have a `unpin` `crid` now
-6. Change it from `5 = ['user_id', 'purpose']` to `['user_id', 'csrf']`
+6. Change it from `5 = ['user_id', 'purpose']` to ` 3 = ['user_id', 'csrf']`
 7.  Use it to share the listing with our user: Request `/share_listing?id=crid%3A_MODIFIED_CRID_2&other=our_user` with cookie `csrf=pin_listing`
 8. View the internal listing, flag is in the comments
 
