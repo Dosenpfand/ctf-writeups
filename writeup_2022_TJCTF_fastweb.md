@@ -5,7 +5,7 @@ Participant: Dosenpfand
 
 ## TL;DR / Short Summary
 
-A reverse engineering challenge where the authentication of a web application had to be bypassed.
+A reverse engineering challenge where the authentication of a web application has to be bypassed.
 
 ## Task Description
 
@@ -147,7 +147,7 @@ sha512_hash(pcVar6 + lVar3 + 1,0xfffffffffffffffe - lVar3,acStack88);
 
 ## Exploitable Issue and Solution
 
-An exploitable issue and, as a result thereof, solution was found by my team mates `chriswe` and `ro`. They invested time to understand the decompiled and dissasembled code of `verifyPassword` and discovered that the hash of the password is incorrectly and insufficiently compared to the reference one.
+An exploitable issue and, as a result thereof, solution was found by my teammates `chriswe` and `ro`. They invested time to understand the decompiled and dissasembled code of `verifyPassword` and discovered that the hash of the password is incorrectly and insufficiently compared to the reference one.
 To correctly validate a password just 4 bytes need to have a specific value: The bytes at index 6 and 7 need to be identical to the ones at index 0 and 1 of the reference password. Additionally bytes 4 and 5 need to be zero so the comparison stops immediately and `verifyPassword` returns `TRUE`. Using the hash of the user `sicer` this condition can be expressed as
 
 ```
@@ -257,11 +257,10 @@ TODO: no results, why, slow, ... etc.
 
 ## Lessons Learned
 
-TODO: Document what you learned during the competition.
-TODO: learn more assembly before trying harder reversing examples.
-TODO: Know when fuzzing is a viable approach
-TODO: gdb
+My main takeaway was that I still need to learn some x86 assembly before trying more advanced reversing challenges. While the decompiled code from Ghidra is sometimes quite useful, other times it fails - and all there is left is the disassembly.
+Nevertheless I could make some initial experience with new tools and libraries, e.g. LIEF and GoAhead and learn some assembly and gdb/Pwndbg from my teammates.
 
 ## References
-
-TODO: List external resources (academic papers, technical blogs, CTF writeups, ...) you used while working on this task.
+* [Embedthis GoAhead™ Documentation](https://www.embedthis.com/goahead/doc/)
+* [LIEF Documentation](https://lief-project.github.io/doc/stable/)
+* [libFuzzer Documentation](https://llvm.org/docs/LibFuzzer.html)
