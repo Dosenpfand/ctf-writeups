@@ -23,19 +23,22 @@ When accessing the live instance we where presented with the following text.
 When subsquently trying to access the linked
 [fleg.txt](https://fast-web.tjc.tf/flag.txt) we got a basic HTTP authentication prompt as defined in [RFC 7235](https://datatracker.ietf.org/doc/html/rfc7235). Trying with a random username and password we got the following response back.
 
-> <html>
+```html
+ <html>
     <head><title>Document Error: Unauthorized</title></head>
     <body>
         <h2>Access Error: Unauthorized</h2>
     </body>
 </html>
+```
 
 From this we got the impression that we "just" needed to bypass this authentication, probably with the username `sicer`, to get the flag.
 
 ## Analysis Steps
 
 After extracting `server.zip` we get the following folder structure and files.
-```
+
+```sh
 [4.0K]  ./
 ├── [4.0K]  app/
 │   ├── [4.0K]  files/
@@ -74,14 +77,14 @@ Summarizing our analysis of `app/auth.txt` and `app/route.txt`: The user `sicer`
 
 The `goahead/server` file is assumed to be the binary serving the application. It is a 64 bit Linux binary with debug symbols.
 
-```
+```sh
 > file goahead/server
 goahead/server: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=4b392583066eb803ec74f25ace3c13b3ed616b14, for GNU/Linux 3.2.0, not stripped
 ```
 
 The `Dockerfile` seems to be a standard Ubuntu 20.04 instance launching the goahead `server` binary with the included configuration.
 
-```
+```Dockerfile
 FROM ubuntu:focal-20220113
 COPY app ./goahead/server /app/
 CMD ["/app/server", "-v", "/app/files/", ":80", "/app/auth.txt", "/app/route.txt"]
@@ -91,13 +94,13 @@ By opening the `goahead/server` binary in [Ghidra](https://ghidra-sre.org/) and 
 
 Judging by its name, we deem the `websSetPasswordStoreVerify` function call as most interesting.
 
-```
+```c
 uVar4 = websSetPasswordStoreVerify(verifyPassword);
 ```
 
  It is declared and [documented](https://www.embedthis.com/goahead/doc/ref/api/goahead.html#group___webs_auth_1gac050abeadb21db4a90197eab284b115b) follows.
 
-```
+```c
 /**
     Set the password store verify callback
     @param verify WebsVerify callback function
@@ -109,7 +112,7 @@ PUBLIC void websSetPasswordStoreVerify(WebsVerify verify);
 
 The type `WebsVerify` of its argument ist declared as:
 
-```
+```c
 /**
     Callback to verify the username and password
     @param wp Webs request object
@@ -122,7 +125,7 @@ typedef bool (*WebsVerify)(Webs *wp);
 
 We `Webs` struct describes a HTTP request and has among others a `password` and `username` member.
 
-```
+```c
 /**
     GoAhead request structure. This is a per-socket connection structure.
     @defgroup Webs Webs
@@ -141,7 +144,7 @@ To summarize these interactions: The `main` functions sets the password verifica
 
 By checking `verifyPassword` in Ghidra, we see that among other things it calculates a SHA-512 hash, which confirms our initial assumption of the password being hashed using SHA-512.
 
-```
+```c
 sha512_hash(pcVar6 + lVar3 + 1,0xfffffffffffffffe - lVar3,acStack88);
 ```
 
@@ -150,7 +153,7 @@ sha512_hash(pcVar6 + lVar3 + 1,0xfffffffffffffffe - lVar3,acStack88);
 An exploitable issue and, as a result thereof, solution was found by my teammates `chriswe` and `ro`. They invested time to understand the decompiled and dissasembled code of `verifyPassword` and discovered that the hash of the password is incorrectly and insufficiently compared to the reference one.
 To correctly validate a password just 4 bytes need to have a specific value: The bytes at index 6 and 7 need to be identical to the ones at index 0 and 1 of the reference password. Additionally bytes 4 and 5 need to be zero so the comparison stops immediately and `verifyPassword` returns `TRUE`. Using the hash of the user `sicer` this condition can be expressed as
 
-```
+```c
 (output[6] == 0xe8) && (output[7] == 0xb8) && (output[4] == 0) && (output[5] == 0)
 ```
 
@@ -169,14 +172,14 @@ One of my failed attempts to solve this challenge consisted of fuzzing `verifyPa
 
 We start by finding the location of `verifyPasssword` in the `server` binary using `readelf`.
 
-```
+```sh
 > readelf -a server | grep verifyPassword
    284: 000000000001454b     0 NOTYPE  GLOBAL DEFAULT   14 verifyPassword
 ```
 
 We can then write a small Python script that uses the [LIEF](https://lief-project.github.io/) library to export the function and save it as a library.
 
-```
+```python
 #!/usr/bin/env python3
 import lief
 in_file = 'server'
@@ -190,7 +193,7 @@ elf.write(f'lib{in_file}.so')
 
 Then we can use this new library to fuzz it using [libFuzzer](https://llvm.org/docs/LibFuzzer.html).
 
-```
+```c
 #include "goahead-5.2.0/build/linux-x64-default/inc/goahead.h"
 #include <dlfcn.h>
 #include <signal.h>
@@ -248,7 +251,8 @@ Every fuzz iteration the fuzz `Data` is set as a trial password and `verifyPassw
 If the password authenticates successfully we cause a segmentation fault to stop the fuzz testing.
 
 The code is compiled and run using the following commands.
-```
+
+```sh
 clang -DUSE_LIBFUZZER -O1 -g -fsanitize=fuzzer fuzz.c -no-pie -o fuzz -ldl
 LD_LIBRARY_PATH=. ./fuzz CORPUS -workers=4 -jobs=4
 ```
