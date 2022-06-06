@@ -1,6 +1,5 @@
 # TJCTF 2022: fast-web
 
-TODO:
 Participant: Dosenpfand
 
 ## TL;DR / Short Summary
@@ -147,8 +146,6 @@ By checking `verifyPassword` in Ghidra, we see that among other things it calcul
 sha512_hash(pcVar6 + lVar3 + 1,0xfffffffffffffffe - lVar3,acStack88);
 ```
 
-TODO: explain next section, failed attempts, etc.
-
 ## Exploitable Issue and Solution
 
 An exploitable issue and, as a result thereof, solution was found by my teammates `chriswe` and `ro`. They invested time to understand the decompiled and dissasembled code of `verifyPassword` and discovered that the hash of the password is incorrectly and insufficiently compared to the reference one.
@@ -164,8 +161,6 @@ They wrote a brute force script and found that the hash of `5qZ*Bjjjj` produces 
 Using it as a password the flag can be retrieved.
 
 **Flag: `tjctf{g0_ah3ad_and_us3_a_n0rm4l_w3b_serv3r_pls_4b470205e474e398}`**
-
-TODO: better? code of comparison?
 
 ## Failed Attempts
 
