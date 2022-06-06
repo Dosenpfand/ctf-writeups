@@ -141,12 +141,13 @@ typedef struct Webs {
 
 To summarize these interactions: The `main` functions sets the password verification function via `websSetPasswordStoreVerify` to the function `verifyPassword` function. This function takes a pointer to a `Webs` struct (which contains `username` and `password`) and if it authenticates successfully it returns `TRUE`, otherwise `FALSE`.
 
-
 By checking `verifyPassword` in Ghidra, we see that among other things it calculates a SHA-512 hash, which confirms our initial assumption of the password being hashed using SHA-512.
 
 ```c
 sha512_hash(pcVar6 + lVar3 + 1,0xfffffffffffffffe - lVar3,acStack88);
 ```
+
+TODO: explain next section, failed attempts, etc.
 
 ## Exploitable Issue and Solution
 
@@ -257,7 +258,24 @@ clang -DUSE_LIBFUZZER -O1 -g -fsanitize=fuzzer fuzz.c -no-pie -o fuzz -ldl
 LD_LIBRARY_PATH=. ./fuzz CORPUS -workers=4 -jobs=4
 ```
 
-TODO: no results, why, slow, ... etc.
+The execution yields an output similar to this example.
+
+```
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 3866050353
+INFO: Loaded 1 modules   (9 inline 8-bit counters): 9 [0x49dc9a, 0x49dca3),
+INFO: Loaded 1 PC tables (9 PCs): 9 [0x49dca8,0x49dd38),
+INFO:        0 files found in CORPUS
+INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
+INFO: A corpus is not provided, starting from an empty corpus
+#2	INITED cov: 3 ft: 3 corp: 1/1b exec/s: 0 rss: 27Mb
+#1048576	pulse  cov: 3 ft: 3 corp: 1/1b lim: 4096 exec/s: 524288 rss: 27Mb
+#2097152	pulse  cov: 3 ft: 3 corp: 1/1b lim: 4096 exec/s: 349525 rss: 27Mb
+```
+
+We can see that on the current machine, the code gets executed 349525 times per second on each of the 4 cores, 1398100 times per second in total.
+From the solution of my colleagues (described in [Exploitable Issue and Solution](#exploitable-issue-and-solution)
+) we know that each try has a chance of $ \frac{1}{256^4} $ fulfilling the criteria of authenticating. So after running it for half an hour there was only a $ 1-(1-\frac{1}{256^4})^{1398100 * 1800} = 44.3 \% $ chance of finding match, if the fuzzer only tried distinct inputs.
 
 ## Lessons Learned
 
