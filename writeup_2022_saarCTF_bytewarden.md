@@ -5,26 +5,23 @@ Participant: Dosenpfand
 
 ## TL;DR / Short Summary
 
-A web challenge, consisting of a Django application that implements a password manager where 2 exploitable vulnerabilities where present.
+A web challenge, consisting of a [Django](https://www.djangoproject.com/) application where multiple exploitable vulnerabilities where present.
 
 ## Task Description
 
-Provide a task description containing all the basic information:
-
-* Goal of the task
-* General type of task (web application, cryptography, ...)
-* Available resources (source code, binary-only, network service, ...)
-* Any hints provided by the organizers or you might noticed in the task description
-* ...
+The challenge consisted of a web application, implemented using the Python web framework Django. It implements a password manager, where users can register and subsequently save passwords and security questions with its answers.
+The application was reachable over plaintext HTTP on port 1984 and its source code was located in `/home/bytewarden`. Additionally, to the source code, network captures of requests opposing teams where executing, could be used as resources.
 
 ## Analysis Steps
-Note: This write-up is only focuses on only one vulnerability of the application. There are at least three other ones, two of them described in the [official saarCTF git repo](https://github.com/saarsec/saarctf-2022/tree/master/bytewarden/exploits) and one of them described in a write-up by my teammates.
+Note: This write-up focuses on only one vulnerability of the application. There are at least three other ones, two of them described in the [saarCTF official git repo](https://github.com/saarsec/saarctf-2022/tree/master/bytewarden/exploits) and one of them described in a write-up by my teammates.
 
+We started to analyze the service by skimming through the source code files. As none of us had any previous experience with Django it proofed difficult to spot unusual code parts.
 
-TODO: Explain your analysis in detail. Cover all the technical aspects, including the used tools and commands. Mention other collaborators and distinguish contributions.
+We noticed that most values that are saved in the database, an [SQLite](https://www.sqlite.org/index.html) database located at `/home/bytewarden/bytewarden/db.sqlite`), were encrypted by a simple scheme: First they where XORed with the username and subsequently Base64 encoded. This happens on the client side via Javascript using the function [`submit_form()`](https://github.com/saarsec/saarctf-2022/blob/1cdae5252e5b702f07833df0104dbe39751d8670/bytewarden/service/bytewarden/bytewarden/static/crypto.js#L46).
+
 TODO: where are the flags placed
 
-We started to analyze the service by skimming through the source code files. As none of us had any previous experience with Django it proofed difficult to spot unusual code parts. However, after some digging, we found a suspicious function in the `TimingMiddleware` class in the file [`bytewarden/bytewarden/utils.py`](https://github.com/saarsec/saarctf-2022/blob/1cdae5252e5b702f07833df0104dbe39751d8670/bytewarden/service/bytewarden/bytewarden/utils.py#L39):
+Finally, we found a suspicious function in the `TimingMiddleware` class in the file [`bytewarden/bytewarden/utils.py`](https://github.com/saarsec/saarctf-2022/blob/1cdae5252e5b702f07833df0104dbe39751d8670/bytewarden/service/bytewarden/bytewarden/utils.py#L39):
 
 ```python
 def process_template_response(self, request, response):
@@ -48,7 +45,9 @@ def process_template_response(self, request, response):
             + f"User: {request.user.username}, last login {request.user.last_login}, date joined {request.user.date_joined}"
 ```
 
-We suspected that this function allowed remote code execution to logged-in users: The [`timeit()`](https://docs.python.org/3/library/timeit.html) function executes the string passed as `setup` parameter as Python code. This string is partly controlled by the user via the HTTP post parameter `2fa_code`.
+## Vulnerabilities / Exploitable Issue
+
+We suspected that this `process_template_response()` function allowed remote code execution to logged-in users: The [`timeit()`](https://docs.python.org/3/library/timeit.html) function executes the string passed as `setup` parameter as Python code. This string is partly controlled by the user via the HTTP post parameter `2fa_code`.
 
 We deployed a quick and dirty fix by sanitizing the user input to the `setup` parameter to only allow digit characters:
 
@@ -58,6 +57,8 @@ setup = \
 + f"u_code = '{filter(str.isdigit, request.user.code)}'\n"\
 + f"p_code = '{filter(str.isdigit, request.POST.get('2fa_code'))}'"
 ```
+
+## Solution
 
 To exploit the issue ourselves we reused a code snippet that another team was using to steal out flag and therefore ended up in our logs:
 
@@ -78,8 +79,7 @@ FineGullibleCarload4076|FSgvNzwBPS8oIy0sAiAjLl44N2B6RFcjPxdXBjoJAlonKSEpMA8=
 WetCarelessCappelletti2559|BCQ1ERoGJC8kMjIKIDEhITs0KDsmKlpQBXgZASItCTdTP1YAOT4=
 ```
 
-TODO: link to source code?
-The passwords are saved obfuscated in the database by XORing them with the associated username and then base64 encoding the result. To reverse the obfuscation we used a [Cyberchef Recipe](https://gchq.github.io/CyberChef/#recipe=From_Base64('A-Za-z0-9%2B/%3D',true)XOR(%7B'option':'UTF8','string':'CuteDifficultLocket3883'%7D,'Standard',false)&input=RURRMU56OGNFU1VvSWpRbE5RMCtKd1ZTTTJaVUMzc0xRQVloTjFvMkZodFVOeXBOS3hJPQ) and got the flag which we submitted successfully.
+To decrypt the passwords we used a [Cyberchef recipe](https://gchq.github.io/CyberChef/#recipe=From_Base64('A-Za-z0-9%2B/%3D',true)XOR(%7B'option':'UTF8','string':'CuteDifficultLocket3883'%7D,'Standard',false)&input=RURRMU56OGNFU1VvSWpRbE5RMCtKd1ZTTTJaVUMzc0xRQVloTjFvMkZodFVOeXBOS3hJPQ) and got the flag which we submitted successfully.
 
 **Flag: `SAAR{uwCAAAIAAQDn7GUl3HH5rDs3Ppr7BF9g}`**
 
@@ -108,35 +108,20 @@ resp = s.post(HOST + "/vault/", verify=False, timeout=timeout, data={'2fa_code':
 print(resp.text)
 ```
 
-It first registers a new user on the opposing teams instance, then logs in and finally submits the vault form including the exploit in the `2fa_code` field. Unfortunately, shortly after we were able to successfully test this first automation step, another team took all instances completely offline that did not yet patch this RCE vulnerability.
-TODO: how it finished
-
-TODO: Note, other explots, link to repo
-
-## Vulnerabilities / Exploitable Issue(s)
-
-List (potential) security issues you discovered in the scope of the task and how they could be exploited.
-
-## Solution
-
-Provide a clean (i.e., without analysis and research steps) guideline to get from the task description to the solution. If you did not finish the task, take your most promising approach as a goal.
-
-## Failed Attempts
-
-Describe attempts apart from the solution above which you tried. Recap and try to explain why they did not work.
+It first registers a new user on the opposing teams instance, then logs in and finally submits the vault form including the exploit in the `2fa_code` field. Unfortunately, shortly after we were able to successfully test this first automation step, another team took all instances completely offline that did not yet patch this RCE vulnerability. We could therefore not continue the automation process, as no targets where available anymore.
 
 ## Alternative Solutions
 
-If you can think of an alternative solution (or there are others already published), compare your attempts with those.
+TODO: link
+TODO: If you can think of an alternative solution (or there are others already published), compare your attempts with those.
 
 ## Lessons Learned
 
-TODO: Document what you learned during the competition.
-TODO: More stressful than jeopardy, hard to fix and exploit in parallel, harder than expected to automate the exploit
+While before the saarCTF I had only participated in two Jeopardy style CTFs, this was my first Attack/Defense CTF. Compared to the Jeopardy style it felt even more intense. While searching for vulnerabilities was quite comparable, simultaneously fixing and exploiting an issue was an interesting experience.
+
+Finally, automating the exploit process was much more time-intense than expected. However, it could have been prepared and practiced, in advance before the main event.
 
 ## References
-
-TODO: List external resources (academic papers, technical blogs, CTF writeups, ...) you used while working on this task.
 
 * [saarCTF official git repo](https://github.com/saarsec/saarctf-2022/)
 * [Python timeit() documentation](https://docs.python.org/3/library/timeit.html)
