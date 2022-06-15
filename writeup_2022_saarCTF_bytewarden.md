@@ -1,6 +1,5 @@
 # saarCTF 2022: bytewarden
 
-TODO
 Participant: Dosenpfand
 
 ## TL;DR / Short Summary
@@ -13,13 +12,10 @@ The challenge consisted of a web application, implemented using the Python web f
 The application was reachable over plaintext HTTP on port 1984 and its source code was located in `/home/bytewarden`. Additionally, to the source code, network captures of requests opposing teams where executing, could be used as resources.
 
 ## Analysis Steps
-Note: This write-up focuses on only one vulnerability of the application. There are at least three other ones, two of them described in the [saarCTF official git repo](https://github.com/saarsec/saarctf-2022/tree/master/bytewarden/exploits) and one of them described in a write-up by my teammates.
 
 We started to analyze the service by skimming through the source code files. As none of us had any previous experience with Django it proofed difficult to spot unusual code parts.
 
 We noticed that most values that are saved in the database, an [SQLite](https://www.sqlite.org/index.html) database located at `/home/bytewarden/bytewarden/db.sqlite`), were encrypted by a simple scheme: First they where XORed with the username and subsequently Base64 encoded. This happens on the client side via Javascript using the function [`submit_form()`](https://github.com/saarsec/saarctf-2022/blob/1cdae5252e5b702f07833df0104dbe39751d8670/bytewarden/service/bytewarden/bytewarden/static/crypto.js#L46).
-
-TODO: where are the flags placed
 
 Finally, we found a suspicious function in the `TimingMiddleware` class in the file [`bytewarden/bytewarden/utils.py`](https://github.com/saarsec/saarctf-2022/blob/1cdae5252e5b702f07833df0104dbe39751d8670/bytewarden/service/bytewarden/bytewarden/utils.py#L39):
 
@@ -112,8 +108,7 @@ It first registers a new user on the opposing teams instance, then logs in and f
 
 ## Alternative Solutions
 
-TODO: link
-TODO: If you can think of an alternative solution (or there are others already published), compare your attempts with those.
+This write-up focuses on only one vulnerability of the application. There are at least three other ones, two of them described in the [saarCTF official git repo](https://github.com/saarsec/saarctf-2022/tree/master/bytewarden/exploits) and one of them described in a write-up by my teammates.
 
 ## Lessons Learned
 
