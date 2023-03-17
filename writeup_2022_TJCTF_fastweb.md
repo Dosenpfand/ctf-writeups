@@ -164,7 +164,7 @@ Using it as a password the flag can be retrieved.
 
 ## Failed Attempts
 
-One of my failed attempts to solve this challenge consisted of fuzzing `verifyPassword` to find a password that authenticates successfully. It consistedd of two parts: Transforming the executable into a library and writing some glue code that is executed by the fuzzer.
+One of my failed attempts to solve this challenge consisted of fuzzing `verifyPassword` to find a password that authenticates successfully. It consisted of two parts: Transforming the executable into a library and writing some glue code that is executed by the fuzzer.
 
 We start by finding the location of `verifyPasssword` in the `server` binary using `readelf`.
 
